@@ -1,0 +1,20 @@
+[package]
+name = "sudoku_solver"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+hashbrown = "0.14.3"
+itertools = "0.12.0"
+owo-colors = "3.5.0"
+
+[profile.release]
+panic = "abort"
+lto = true
+codegen-units = 1
+strip = true
+
+[lints.clippy]
+pedantic = "warn"
+nursery = "warn"
+all = "warn"
