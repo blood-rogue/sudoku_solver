@@ -15,7 +15,7 @@ fn main() {
         let mut inp = String::new();
         std::io::stdin().lock().read_line(&mut inp).unwrap();
 
-        rows.push(inp.trim().to_string());
+        rows.push(inp.trim().as_bytes().to_vec());
     }
 
     let mut puzzle = Puzzle::new(&rows);

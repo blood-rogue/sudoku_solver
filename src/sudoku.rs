@@ -1,5 +1,5 @@
 use hashbrown::{HashMap, HashSet};
-use std::fmt::{Debug, Display};
+use std::fmt::Display;
 
 use itertools::Itertools;
 use owo_colors::OwoColorize;
@@ -8,7 +8,7 @@ use crate::consts::{box_of, col_of, row_of, BOXES, COLS, ROWS};
 
 pub type Idx = (usize, usize);
 
-const FULL_SET: [char; 9] = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
+const FULL_SET: [u8; 9] = [b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8', b'9'];
 
 const HORZ_BAR: &str = "─";
 const VERT_BAR: &str = "│";
@@ -28,9 +28,9 @@ const HORZ_B_JOINT: &str = "┴";
 const INTERSECTION: &str = "┼";
 
 #[derive(Clone, PartialEq, Eq)]
-enum Cell {
-    Unsolved(HashSet<char>),
-    Solved(char),
+pub enum Cell {
+    Unsolved(HashSet<u8>),
+    Solved(u8),
 }
 
 impl Cell {
@@ -38,21 +38,21 @@ impl Cell {
         matches!(self, Self::Unsolved(_))
     }
 
-    const fn as_option(&self) -> Option<char> {
+    const fn as_option(&self) -> Option<u8> {
         match self {
             Self::Solved(v) => Some(*v),
             Self::Unsolved(_) => None,
         }
     }
 
-    fn cell_values(&self) -> HashSet<char> {
+    fn cell_values(&self) -> HashSet<u8> {
         match self {
             Self::Unsolved(set) => set.clone(),
             Self::Solved(_) => HashSet::new(),
         }
     }
 
-    fn cell_values_mut(&mut self) -> &mut HashSet<char> {
+    fn cell_values_mut(&mut self) -> &mut HashSet<u8> {
         match self {
             Self::Solved(_) => unreachable!(),
             Self::Unsolved(set) => set,
@@ -62,13 +62,13 @@ impl Cell {
 
 #[derive(Clone)]
 struct PreSet {
-    numbers: HashSet<char>,
+    numbers: HashSet<u8>,
     cells: HashSet<Idx>,
 }
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct Puzzle {
-    cells: HashMap<Idx, Cell>,
+    pub cells: HashMap<Idx, Cell>,
     prefilled: Vec<Idx>,
 }
 
@@ -81,17 +81,17 @@ fn remove_any(x: &HashSet<Idx>, xs: &[HashSet<Idx>]) -> Vec<HashSet<Idx>> {
 }
 
 impl Puzzle {
-    pub fn new(input: &[String]) -> Self {
+    pub fn new(input: &[Vec<u8>]) -> Self {
         let mut cells = HashMap::new();
         let mut prefilled = Vec::new();
 
         for (row_number, row) in input.iter().enumerate() {
-            for (col_number, ch) in row.char_indices() {
+            for (col_number, ch) in row.iter().enumerate() {
                 cells.insert(
                     (row_number, col_number),
-                    if FULL_SET.contains(&ch) {
+                    if FULL_SET.contains(ch) {
                         prefilled.push((col_number, row_number));
-                        Cell::Solved(ch)
+                        Cell::Solved(*ch)
                     } else {
                         Cell::Unsolved(HashSet::new())
                     },
@@ -356,15 +356,15 @@ impl Display for Puzzle {
     fn fmt(&self, buf: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(buf, "{TOP_L_CORNER}")?;
         for _ in 0..8 {
-            write!(buf, "{}{}", HORZ_BAR.repeat(3), HORZ_T_JOINT)?;
+            write!(buf, "{}{HORZ_T_JOINT}", HORZ_BAR.repeat(3))?;
         }
 
-        writeln!(buf, "{}{}", HORZ_BAR.repeat(3), TOP_R_CORNER)?;
+        writeln!(buf, "{}{TOP_R_CORNER}", HORZ_BAR.repeat(3))?;
 
-        let mut puzzle = vec![vec!['a'; 9]; 9];
+        let mut puzzle = [[0u8; 9]; 9];
 
         for (&(r, c), cell) in &self.cells {
-            puzzle[r][c] = cell.as_option().unwrap_or('_');
+            puzzle[r][c] = cell.as_option().unwrap_or(b'_');
         }
 
         for (i, row) in puzzle.iter().enumerate() {
@@ -396,26 +396,11 @@ impl Display for Puzzle {
 
         write!(buf, "{BOT_L_CORNER}")?;
         for _ in 0..8 {
-            write!(buf, "{}{}", HORZ_BAR.repeat(3), HORZ_B_JOINT)?;
+            write!(buf, "{}{HORZ_B_JOINT}", HORZ_BAR.repeat(3))?;
         }
 
-        writeln!(buf, "{}{}", HORZ_BAR.repeat(3), BOT_R_CORNER)?;
+        writeln!(buf, "{}{BOT_R_CORNER}", HORZ_BAR.repeat(3))?;
 
         Ok(())
-    }
-}
-
-impl Debug for Puzzle {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut cells = vec!['\0'; 81];
-
-        for (&(row, col), cell) in &self.cells {
-            cells[row * 9 + col] = match cell {
-                Cell::Solved(c) => *c,
-                Cell::Unsolved(_) => '_',
-            }
-        }
-
-        write!(f, "{}", cells.iter().collect::<String>())
     }
 }
