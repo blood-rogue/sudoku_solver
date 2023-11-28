@@ -22,7 +22,7 @@ cargo r -r
 
 Then provide one row at a time as input.
 
-*Note: I used `'_'` in the example for blanks but you can use any character than `1` to `9` for blank spaces*
+*Note: I used `_` in the example for blanks but you can use any character other than `1` to `9` for blank spaces*
 
 ![Usage Example](image.png)
 
@@ -45,7 +45,7 @@ Or can run the test individually for each difficulty by running
 $ cargo test test_<difficulty>
 ```
 
-You can find the test boards in the `test/boards` directory.
+You can find the test puzzles in the `test/puzzles` directory.
 
 ## Inspirations
 

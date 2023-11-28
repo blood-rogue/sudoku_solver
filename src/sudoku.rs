@@ -67,7 +67,7 @@ struct PreSet {
 }
 
 #[derive(Clone, PartialEq, Eq)]
-pub struct Board {
+pub struct Puzzle {
     cells: HashMap<Idx, Cell>,
     prefilled: Vec<Idx>,
 }
@@ -80,7 +80,7 @@ fn remove_any(x: &HashSet<Idx>, xs: &[HashSet<Idx>]) -> Vec<HashSet<Idx>> {
         .collect()
 }
 
-impl Board {
+impl Puzzle {
     pub fn new(input: &[String]) -> Self {
         let mut cells = HashMap::new();
         let mut prefilled = Vec::new();
@@ -254,7 +254,12 @@ impl Board {
 
     fn find_pre_sets(&mut self, range: &[Idx]) -> Vec<PreSet> {
         let pre_sets = |n: usize| -> Vec<PreSet> {
-            fn go(sets: &[HashSet<Idx>], acc: Vec<PreSet>, board: &Board, n: usize) -> Vec<PreSet> {
+            fn go(
+                sets: &[HashSet<Idx>],
+                acc: Vec<PreSet>,
+                puzzle: &Puzzle,
+                n: usize,
+            ) -> Vec<PreSet> {
                 if sets.is_empty() {
                     return acc;
                 }
@@ -262,7 +267,7 @@ impl Board {
                 let (x, xs) = sets.split_first().unwrap();
 
                 let nums = x.iter().fold(HashSet::new(), |acc, value| {
-                    board.cells[value]
+                    puzzle.cells[value]
                         .cell_values()
                         .union(&acc)
                         .copied()
@@ -276,9 +281,9 @@ impl Board {
                         cells: x.clone(),
                     });
 
-                    go(&remove_any(x, xs), acc, board, n)
+                    go(&remove_any(x, xs), acc, puzzle, n)
                 } else {
-                    go(xs, acc, board, n)
+                    go(xs, acc, puzzle, n)
                 }
             }
 
@@ -347,7 +352,7 @@ impl Board {
     }
 }
 
-impl Display for Board {
+impl Display for Puzzle {
     fn fmt(&self, buf: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(buf, "{TOP_L_CORNER}")?;
         for _ in 0..8 {
@@ -356,13 +361,13 @@ impl Display for Board {
 
         writeln!(buf, "{}{}", HORZ_BAR.repeat(3), TOP_R_CORNER)?;
 
-        let mut board = vec![vec!['a'; 9]; 9];
+        let mut puzzle = vec![vec!['a'; 9]; 9];
 
         for (&(r, c), cell) in &self.cells {
-            board[r][c] = cell.as_option().unwrap_or('_');
+            puzzle[r][c] = cell.as_option().unwrap_or('_');
         }
 
-        for (i, row) in board.iter().enumerate() {
+        for (i, row) in puzzle.iter().enumerate() {
             write!(buf, "{VERT_BAR}")?;
             for (j, &data) in row.iter().enumerate() {
                 write!(
@@ -400,7 +405,7 @@ impl Display for Board {
     }
 }
 
-impl Debug for Board {
+impl Debug for Puzzle {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut cells = vec!['\0'; 81];
 

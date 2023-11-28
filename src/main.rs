@@ -6,7 +6,7 @@ mod tests;
 
 use std::io::BufRead;
 
-use sudoku::Board;
+use sudoku::Puzzle;
 
 fn main() {
     let mut rows = Vec::new();
@@ -18,15 +18,15 @@ fn main() {
         rows.push(inp.trim().to_string());
     }
 
-    let mut board = Board::new(&rows);
+    let mut puzzle = Puzzle::new(&rows);
 
-    if board.is_valid() {
-        if board.solve() {
-            println!("{board}");
+    if puzzle.is_valid() {
+        if puzzle.solve() {
+            println!("{puzzle}");
         } else {
-            println!("Couldn't solve board");
+            println!("Couldn't solve puzzle");
         }
     } else {
-        println!("invalid board");
+        println!("invalid puzzle");
     }
 }
