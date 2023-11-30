@@ -64,12 +64,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dd8b5dd2ae5ed71462c540258bedcb51965123ad7e7ccf4b9a8cafaa4a63576d"
 
 [[package]]
-name = "owo-colors"
-version = "3.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c1b04fb49957986fdce4d6ee7a65027d55d4b6d2265e5848bbb507b58ccfdb6f"
-
-[[package]]
 name = "proc-macro2"
 version = "1.0.70"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -126,11 +120,10 @@ dependencies = [
 
 [[package]]
 name = "sudoku_solver"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "hashbrown",
  "itertools",
- "owo-colors",
  "serde",
  "serde_json",
 ]

@@ -1,24 +1,17 @@
-mod consts;
+mod bench;
 mod sudoku;
 
 #[cfg(test)]
 mod tests;
 
 use std::io::BufRead;
-
 use sudoku::Puzzle;
 
 fn main() {
-    let mut rows = Vec::new();
+    let mut inp = String::new();
+    std::io::stdin().lock().read_line(&mut inp).unwrap();
 
-    for _ in 0..9 {
-        let mut inp = String::new();
-        std::io::stdin().lock().read_line(&mut inp).unwrap();
-
-        rows.push(inp.trim().as_bytes().to_vec());
-    }
-
-    let mut puzzle = Puzzle::new(&rows);
+    let mut puzzle = Puzzle::new_from_string(inp.trim().as_bytes());
 
     if puzzle.is_valid() {
         if puzzle.solve() {

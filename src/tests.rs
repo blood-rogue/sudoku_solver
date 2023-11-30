@@ -17,11 +17,16 @@ struct TestPuzzle {
 }
 
 fn solution_str(puzzle: &Puzzle) -> String {
-    let mut cells = vec![0u8; 81];
+    let mut cells = vec![0; 81];
 
-    for (&(row, col), cell) in &puzzle.cells {
+    for ((row, col), cell) in puzzle
+        .0
+        .iter()
+        .enumerate()
+        .map(|(i, t)| ((i / 9, i % 9), t.clone()))
+    {
         cells[row * 9 + col] = match cell {
-            Cell::Solved(c) => *c,
+            Cell::Solved(c) => c + b'0',
             Cell::Unsolved(_) => b'_',
         }
     }
@@ -29,7 +34,7 @@ fn solution_str(puzzle: &Puzzle) -> String {
     String::from_utf8(cells).unwrap()
 }
 
-fn test_puzzle(difficulty: &str) {
+fn test_puzzle_with_solution(difficulty: &str) {
     let test_data = serde_json::from_str::<Vec<TestPuzzle>>(
         &std::fs::read_to_string(format!("test/puzzles-{difficulty}.json")).unwrap(),
     )
@@ -38,20 +43,10 @@ fn test_puzzle(difficulty: &str) {
     let mut solved = 0;
 
     for test_puzzle in &test_data {
-        let mut puzzle = Puzzle::new(
-            &test_puzzle
-                .problem
-                .chunks_exact(9)
-                .map(|chunk| chunk.to_vec())
-                .collect::<Vec<_>>(),
-        );
-
-        if !puzzle.is_valid() {
-            panic!("invalid puzzle");
-        }
+        let mut puzzle = Puzzle::new_from_string(&test_puzzle.problem);
 
         if puzzle.solve() && solution_str(&puzzle) == test_puzzle.solution {
-            solved += 1;
+            solved += 1
         }
     }
 
@@ -61,26 +56,31 @@ fn test_puzzle(difficulty: &str) {
 }
 
 #[test]
-pub fn test_easy() {
-    test_puzzle("easy");
+fn test_easy() {
+    test_puzzle_with_solution("easy");
 }
 
 #[test]
-pub fn test_medium() {
-    test_puzzle("medium");
+fn test_medium() {
+    test_puzzle_with_solution("medium");
 }
 
 #[test]
-pub fn test_hard() {
-    test_puzzle("hard");
+fn test_hard() {
+    test_puzzle_with_solution("hard");
 }
 
 #[test]
-pub fn test_expert() {
-    test_puzzle("expert")
+fn test_expert() {
+    test_puzzle_with_solution("expert")
 }
 
 #[test]
-pub fn test_evil() {
-    test_puzzle("evil")
+fn test_evil() {
+    test_puzzle_with_solution("evil")
+}
+
+#[test]
+fn test_combined() {
+    test_puzzle_with_solution("combined")
 }
