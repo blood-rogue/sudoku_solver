@@ -1,11 +1,13 @@
-use hashbrown::HashSet;
 use std::fmt::Display;
 
 use itertools::Itertools;
 
-pub type Idx = usize;
+use crate::bitset::{DigitSet, IndexSet};
 
-pub const ROWS: [[usize; 9]; 9] = [
+pub type Index = usize;
+pub type Digit = u8;
+
+pub const ROWS: [[Index; 9]; 9] = [
     [0, 1, 2, 3, 4, 5, 6, 7, 8],
     [9, 10, 11, 12, 13, 14, 15, 16, 17],
     [18, 19, 20, 21, 22, 23, 24, 25, 26],
@@ -17,7 +19,7 @@ pub const ROWS: [[usize; 9]; 9] = [
     [72, 73, 74, 75, 76, 77, 78, 79, 80],
 ];
 
-pub const COLS: [[usize; 9]; 9] = [
+pub const COLS: [[Index; 9]; 9] = [
     [0, 9, 18, 27, 36, 45, 54, 63, 72],
     [1, 10, 19, 28, 37, 46, 55, 64, 73],
     [2, 11, 20, 29, 38, 47, 56, 65, 74],
@@ -29,7 +31,7 @@ pub const COLS: [[usize; 9]; 9] = [
     [8, 17, 26, 35, 44, 53, 62, 71, 80],
 ];
 
-pub const BOXES: [[usize; 9]; 9] = [
+pub const BOXES: [[Index; 9]; 9] = [
     [0, 1, 2, 9, 10, 11, 18, 19, 20],
     [3, 4, 5, 12, 13, 14, 21, 22, 23],
     [6, 7, 8, 15, 16, 17, 24, 25, 26],
@@ -41,28 +43,28 @@ pub const BOXES: [[usize; 9]; 9] = [
     [60, 61, 62, 69, 70, 71, 78, 79, 80],
 ];
 
-const BOX_MAPPING: [usize; 81] = [
+const BOX_MAPPING: [Index; 81] = [
     0, 0, 0, 1, 1, 1, 2, 2, 2, 0, 0, 0, 1, 1, 1, 2, 2, 2, 0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4,
     4, 5, 5, 5, 3, 3, 3, 4, 4, 4, 5, 5, 5, 3, 3, 3, 4, 4, 4, 5, 5, 5, 6, 6, 6, 7, 7, 7, 8, 8, 8, 6,
     6, 6, 7, 7, 7, 8, 8, 8, 6, 6, 6, 7, 7, 7, 8, 8, 8,
 ];
 
 #[inline]
-pub const fn row_of(idx: Idx) -> [Idx; 9] {
+pub const fn row_of(idx: Index) -> [Index; 9] {
     ROWS[idx / 9]
 }
 
 #[inline]
-pub const fn col_of(idx: Idx) -> [Idx; 9] {
+pub const fn col_of(idx: Index) -> [Index; 9] {
     COLS[idx % 9]
 }
 
 #[inline]
-pub const fn box_of(idx: Idx) -> [Idx; 9] {
+pub const fn box_of(idx: Index) -> [Index; 9] {
     BOXES[BOX_MAPPING[idx]]
 }
 
-const FULL_SET: [u8; 9] = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+const FULL_SET: DigitSet = DigitSet::new_with(0b0000_0011_1111_1110);
 
 const HORZ_BAR: &str = "─";
 const VERT_BAR: &str = "│";
@@ -81,56 +83,57 @@ const HORZ_B_JOINT: &str = "┴";
 
 const INTERSECTION: &str = "┼";
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, Copy)]
 pub enum Cell {
-    Unsolved(HashSet<u8>),
-    Solved(u8),
+    Unsolved(DigitSet),
+    Solved(Digit),
 }
 
 impl Cell {
-    const fn is_empty(&self) -> bool {
+    const fn is_empty(self) -> bool {
         matches!(self, Self::Unsolved(_))
     }
 
-    fn cell_values(&self) -> HashSet<u8> {
+    const fn cell_values(self) -> DigitSet {
         match self {
-            Self::Unsolved(set) => set.clone(),
-            Self::Solved(_) => HashSet::new(),
+            Self::Unsolved(set) => set,
+            Self::Solved(_) => DigitSet::new(),
         }
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 struct PreSet {
-    numbers: HashSet<u8>,
-    cells: HashSet<Idx>,
+    numbers: DigitSet,
+    cells: IndexSet,
 }
 
-#[derive(Clone, PartialEq, Eq)]
 pub struct Puzzle(pub Vec<Cell>);
 
 #[inline]
-fn remove_any(x: &HashSet<Idx>, xs: &[HashSet<Idx>]) -> Vec<HashSet<Idx>> {
+fn remove_any(x: &IndexSet, xs: &[IndexSet]) -> Vec<IndexSet> {
     xs.iter()
-        .filter(|y| y.intersection(x).count() == 0)
-        .cloned()
+        .filter(|y| y.intersection(*x).len() == 0)
+        .copied()
         .collect()
 }
 
 impl Puzzle {
-    pub fn new_from_string(s: &[u8]) -> Self {
-        Self(
+    pub fn new_from_string(s: &[Digit]) -> Self {
+        let s = Self(
             s.iter()
                 .map(|ch| {
                     let ch = *ch - b'0';
-                    if FULL_SET.contains(&ch) {
+                    if FULL_SET.contains(ch) {
                         Cell::Solved(ch)
                     } else {
-                        Cell::Unsolved(HashSet::from(FULL_SET))
+                        Cell::Unsolved(FULL_SET)
                     }
                 })
                 .collect(),
-        )
+        );
+
+        s
     }
 
     pub fn is_valid(&self) -> bool {
@@ -138,33 +141,36 @@ impl Puzzle {
             .concat()
             .iter()
             .map(|range| {
-                let mut unique = HashSet::new();
+                let mut unique = DigitSet::new();
 
                 range
                     .iter()
-                    .filter(|&&idx| self.0[idx].is_empty())
+                    .filter_map(|&idx| match self.0[idx] {
+                        Cell::Solved(v) => Some(v),
+                        Cell::Unsolved(_) => None,
+                    })
                     .all(|value| unique.insert(value))
             })
             .all(|v| v)
     }
 
-    fn find_empty_cell(&self) -> Option<(Idx, HashSet<u8>)> {
+    fn find_empty_cell(&self) -> Option<(Index, DigitSet)> {
         self.0
             .iter()
             .enumerate()
             .filter_map(|(i, cell)| match cell {
                 Cell::Solved(_) => None,
-                Cell::Unsolved(set) => Some((i, set.clone())),
+                Cell::Unsolved(set) => Some((i, *set)),
             })
             .min_by(|(_, set1), (_, set2)| set1.len().cmp(&set2.len()))
     }
 
-    fn cross_out(&mut self, indices: Vec<Idx>, value: u8) {
+    fn cross_out(&mut self, indices: Vec<Index>, value: Digit) {
         for idx in indices {
             match self.0.get_mut(idx).unwrap() {
                 Cell::Solved(_) => {}
                 Cell::Unsolved(set) => {
-                    set.remove(&value);
+                    set.remove(value);
                 }
             }
         }
@@ -179,13 +185,9 @@ impl Puzzle {
                     Cell::Solved(v) => Some(v),
                     Cell::Unsolved(_) => None,
                 })
-                .collect::<HashSet<_>>();
+                .collect::<DigitSet>();
 
-            let values = self.0[idx]
-                .cell_values()
-                .into_iter()
-                .filter(|value| !peer_markup.contains(value))
-                .collect::<HashSet<_>>();
+            let values = self.0[idx].cell_values().difference(peer_markup);
 
             if let Cell::Unsolved(markup) = self.0.get_mut(idx).unwrap() {
                 *markup = values;
@@ -206,7 +208,7 @@ impl Puzzle {
                 let empty_cell_values = self.0[idx].cell_values();
 
                 if empty_cell_values.len() == 1 {
-                    let value = *empty_cell_values.iter().next().unwrap();
+                    let value = empty_cell_values.pop();
                     self.0[idx] = Cell::Solved(value);
 
                     cont = true;
@@ -220,27 +222,22 @@ impl Puzzle {
         modified
     }
 
-    fn find_pre_sets(&mut self, range: &[Idx]) -> Vec<PreSet> {
-        let pre_sets = |n: usize| -> Vec<PreSet> {
-            fn go(
-                sets: &[HashSet<Idx>],
-                acc: Vec<PreSet>,
-                puzzle: &Puzzle,
-                n: usize,
-            ) -> Vec<PreSet> {
+    fn find_pre_sets(&mut self, range: &[Index]) -> Vec<PreSet> {
+        let pre_sets = |n: Index| -> Vec<PreSet> {
+            fn go(sets: &[IndexSet], acc: Vec<PreSet>, puzzle: &Puzzle, n: Index) -> Vec<PreSet> {
                 let [x, xs @ ..] = sets else {
                     return acc;
                 };
 
-                let nums = x.iter().fold(HashSet::new(), |acc, &value| {
-                    puzzle.0[value].cell_values().union(&acc).copied().collect()
+                let nums = x.into_iter().fold(DigitSet::new(), |acc, value| {
+                    puzzle.0[value].cell_values().union(acc)
                 });
 
                 if nums.len() == n {
                     let mut acc = acc;
                     acc.push(PreSet {
                         numbers: nums,
-                        cells: x.clone(),
+                        cells: *x,
                     });
 
                     go(&remove_any(x, xs), acc, puzzle, n)
@@ -254,7 +251,7 @@ impl Puzzle {
                 .filter(|&&idx| self.0[idx].is_empty())
                 .copied()
                 .combinations(n)
-                .map(HashSet::from_iter)
+                .map(IndexSet::from_iter)
                 .collect_vec();
 
             go(&combinations, Vec::new(), self, n)
@@ -266,11 +263,11 @@ impl Puzzle {
     fn apply_presets(&mut self) {
         for indices in [ROWS, COLS, BOXES].concat() {
             for ps in self.find_pre_sets(&indices) {
-                let indices = HashSet::from(indices);
+                let indices = IndexSet::from_iter(indices);
 
-                for cell_idx in indices.difference(&ps.cells) {
-                    if let Some(Cell::Unsolved(set)) = self.0.get_mut(*cell_idx) {
-                        *set = set.difference(&ps.numbers).copied().collect();
+                for cell_idx in indices.difference(ps.cells) {
+                    if let Some(Cell::Unsolved(set)) = self.0.get_mut(cell_idx) {
+                        *set = set.difference(ps.numbers);
                     }
                 }
             }

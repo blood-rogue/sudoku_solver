@@ -1,9 +1,11 @@
+use crate::sudoku::Digit;
+
 use super::Puzzle;
 
 use serde::{Deserialize, Deserializer};
 use std::time::Instant;
 
-fn de<'de, D>(d: D) -> Result<Vec<u8>, D::Error>
+fn de<'de, D>(d: D) -> Result<Vec<Digit>, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -14,11 +16,10 @@ where
 #[derive(Deserialize)]
 struct TestPuzzle {
     #[serde(deserialize_with = "de")]
-    problem: Vec<u8>,
+    problem: Vec<Digit>,
     solution: String,
 }
 
-#[allow(unused)]
 pub fn puzzle() {
     let mut durations = Vec::with_capacity(500);
 

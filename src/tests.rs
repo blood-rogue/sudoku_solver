@@ -1,8 +1,14 @@
+use itertools::Itertools;
+use pretty_assertions::assert_eq;
 use serde::{Deserialize, Deserializer};
 
-use crate::{sudoku::Cell, Puzzle};
+use crate::{
+    bitset::{DigitSet, IndexSet},
+    sudoku::{Cell, Digit},
+    Puzzle,
+};
 
-fn de<'de, D>(d: D) -> Result<Vec<u8>, D::Error>
+fn de<'de, D>(d: D) -> Result<Vec<Digit>, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -12,7 +18,7 @@ where
 #[derive(Deserialize)]
 struct TestPuzzle {
     #[serde(deserialize_with = "de")]
-    problem: Vec<u8>,
+    problem: Vec<Digit>,
     solution: String,
 }
 
@@ -83,4 +89,58 @@ fn test_evil() {
 #[test]
 fn test_combined() {
     test_puzzle_with_solution("combined")
+}
+
+#[test]
+fn test_digitset() {
+    let mut digit_set = DigitSet::new();
+
+    digit_set.insert(1);
+    digit_set.insert(3);
+    digit_set.insert(9);
+
+    assert_eq!(digit_set.into_iter().collect_vec(), vec![1, 3, 9]);
+
+    digit_set.remove(3);
+
+    assert_eq!(digit_set.into_iter().collect_vec(), vec![1, 9]);
+
+    let other_set = DigitSet::from_iter(vec![1, 2, 3, 4]);
+
+    assert_eq!(
+        digit_set.difference(other_set).into_iter().collect_vec(),
+        vec![9]
+    );
+
+    assert_eq!(
+        digit_set.union(other_set).into_iter().collect_vec(),
+        vec![1, 2, 3, 4, 9]
+    );
+
+    assert!(digit_set.contains(1));
+}
+
+#[test]
+fn test_indexset() {
+    let mut digit_set = IndexSet::new();
+
+    digit_set.insert(1);
+    digit_set.insert(3);
+    digit_set.insert(9);
+
+    assert_eq!(digit_set.into_iter().collect_vec(), vec![1, 3, 9]);
+
+    let other_set = IndexSet::from_iter(vec![1, 2, 3, 4]);
+
+    assert_eq!(
+        digit_set.difference(other_set).into_iter().collect_vec(),
+        vec![9]
+    );
+
+    assert_eq!(
+        digit_set.intersection(other_set).into_iter().collect_vec(),
+        vec![1, 3]
+    );
+
+    assert!(digit_set.contains(1));
 }

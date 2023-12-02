@@ -1,4 +1,4 @@
-mod bench;
+mod bitset;
 mod sudoku;
 
 #[cfg(test)]

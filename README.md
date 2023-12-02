@@ -20,7 +20,7 @@ cd sudoku_solver
 cargo r -r
 ```
 
-Then provide one row at a time as input.
+Then provide the entire board as one line.
 
 *Note: I used `_` in the example for blanks but you can use any character other than `1` to `9` for blank spaces*
 
