@@ -45,21 +45,20 @@ fn test_puzzle_with_solution(difficulty: &str) {
     let mut solved = 0;
 
     for TestPuzzle { problem, solution } in &test_data {
-        let mut puzzle = Puzzle::new_from_string(&problem);
+        let mut puzzle = Puzzle::new_from_string(problem);
 
         if puzzle.solve() {
             let sol = solution_str(&puzzle);
             if &sol == solution {
-                solved += 1
+                solved += 1;
             } else {
                 panic!("got: {sol}, expected: {solution}")
             }
         }
     }
 
-    if solved != test_data.len() {
-        panic!("solved {solved}/{}", test_data.len())
-    }
+    let n = test_data.len();
+    assert!(solved == n, "solved {solved}/{n}",);
 }
 
 #[test]
@@ -79,17 +78,17 @@ fn test_hard() {
 
 #[test]
 fn test_expert() {
-    test_puzzle_with_solution("expert")
+    test_puzzle_with_solution("expert");
 }
 
 #[test]
 fn test_evil() {
-    test_puzzle_with_solution("evil")
+    test_puzzle_with_solution("evil");
 }
 
 #[test]
 fn test_combined() {
-    test_puzzle_with_solution("combined")
+    test_puzzle_with_solution("combined");
 }
 
 #[test]
@@ -104,12 +103,7 @@ fn test_17_clue() {
 
 #[test]
 fn test_digitset() {
-    let mut digit_set = DigitSet::new(0);
-
-    digit_set.insert(1);
-    digit_set.insert(3);
-    digit_set.insert(9);
-
+    let mut digit_set = DigitSet::new(0b0000_0010_0000_1010);
     assert_eq!(digit_set.into_iter().collect_vec(), vec![1, 3, 9]);
 
     digit_set.remove(3);
@@ -122,8 +116,6 @@ fn test_digitset() {
         digit_set.union(other_set).into_iter().collect_vec(),
         vec![1, 2, 3, 4, 9]
     );
-
-    assert!(digit_set.contains(1));
 }
 
 #[test]

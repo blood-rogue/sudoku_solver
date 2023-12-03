@@ -1,9 +1,6 @@
 mod bench;
-#[allow(clippy::cast_possible_truncation)]
 mod bitset;
 mod sudoku;
-
-#[allow(clippy::unreadable_literal)]
 mod utils;
 
 #[cfg(test)]

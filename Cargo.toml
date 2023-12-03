@@ -21,3 +21,4 @@ codegen-units = 1
 pedantic = "warn"
 nursery = "warn"
 all = "warn"
+cast_possible_truncation = "allow"

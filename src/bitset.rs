@@ -1,7 +1,7 @@
 use std::usize;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub struct BitSet<T: SetElement>(T::Storage);
+pub struct BitSet<T: SetElement>(pub T::Storage);
 
 pub type DigitSet = BitSet<u8>;
 pub type IndexSet = BitSet<usize>;
@@ -25,16 +25,8 @@ impl BitSet<u8> {
         Self(self.0 | other.0)
     }
 
-    pub fn insert(&mut self, value: u8) {
-        self.0 |= 1 << value;
-    }
-
     pub const fn len(self) -> usize {
         self.0.count_ones() as usize
-    }
-
-    pub const fn contains(self, value: u8) -> bool {
-        self.0 >> value & 1 == 1
     }
 
     pub fn remove(&mut self, value: u8) {
@@ -64,12 +56,13 @@ where
 
 impl FromIterator<u8> for BitSet<u8> {
     fn from_iter<U: IntoIterator<Item = u8>>(iter: U) -> Self {
-        let mut s = Self::new(0);
-        for a in iter {
-            s.insert(a);
+        let mut s = 0;
+
+        for value in iter {
+            s |= 1 << value;
         }
 
-        s
+        Self(s)
     }
 }
 
@@ -179,10 +172,6 @@ impl BitSet<usize> {
     pub fn remove(&mut self, value: usize) {
         self.0 &= !(1 << value);
     }
-
-    pub const fn len(&self) -> usize {
-        self.0.count_ones() as usize
-    }
 }
 
 impl IntoIterator for BitSet<usize>
@@ -199,11 +188,13 @@ where
 
 impl FromIterator<usize> for BitSet<usize> {
     fn from_iter<U: IntoIterator<Item = usize>>(iter: U) -> Self {
-        let mut s = Self::new(0);
-        for a in iter {
-            s.insert(a);
+        let mut s = 0;
+
+        for value in iter {
+            s |= 1 << value;
         }
-        s
+
+        Self(s)
     }
 }
 
