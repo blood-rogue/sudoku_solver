@@ -1,6 +1,6 @@
 [package]
 name = "sudoku_solver"
-version = "0.4.1"
+version = "0.5.0"
 edition = "2021"
 
 [dependencies]
@@ -21,4 +21,3 @@ codegen-units = 1
 pedantic = "warn"
 nursery = "warn"
 all = "warn"
-cast_possible_truncation = "allow"

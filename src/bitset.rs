@@ -1,7 +1,7 @@
 use std::usize;
 
-#[derive(Clone, Copy)]
-pub struct BitSet<T: SetElement>(pub T::Storage);
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub struct BitSet<T: SetElement>(T::Storage);
 
 pub type DigitSet = BitSet<u8>;
 pub type IndexSet = BitSet<usize>;
@@ -21,21 +21,12 @@ impl BitSet<u8> {
         Self(value)
     }
 
-    pub const fn difference(self, other: Self) -> Self {
-        Self(self.0 & !other.0)
-    }
-
     pub const fn union(self, other: Self) -> Self {
         Self(self.0 | other.0)
     }
 
-    pub fn insert(&mut self, value: u8) -> bool {
-        if self.contains(value) {
-            false
-        } else {
-            self.0 |= 1 << value;
-            true
-        }
+    pub fn insert(&mut self, value: u8) {
+        self.0 |= 1 << value;
     }
 
     pub const fn len(self) -> usize {
@@ -52,6 +43,10 @@ impl BitSet<u8> {
 
     pub fn pop(self) -> u8 {
         self.into_iter().rightmost_one_pos()
+    }
+
+    pub fn difference_mut(&mut self, other: Self) {
+        self.0 &= !other.0;
     }
 }
 
@@ -165,8 +160,8 @@ impl SetElement for usize {
 }
 
 impl BitSet<usize> {
-    pub const fn new() -> Self {
-        Self(0)
+    pub const fn new(value: u128) -> Self {
+        Self(value)
     }
 
     pub const fn intersection(self, other: Self) -> Self {
@@ -177,17 +172,12 @@ impl BitSet<usize> {
         Self(self.0 & !other.0)
     }
 
-    pub fn insert(&mut self, value: usize) -> bool {
-        if self.contains(value) {
-            false
-        } else {
-            self.0 |= 1 << value;
-            true
-        }
+    pub fn insert(&mut self, value: usize) {
+        self.0 |= 1 << value;
     }
 
-    pub const fn contains(&self, value: usize) -> bool {
-        self.0 >> value & 1 == 1
+    pub fn remove(&mut self, value: usize) {
+        self.0 &= !(1 << value);
     }
 
     pub const fn len(&self) -> usize {
@@ -209,7 +199,7 @@ where
 
 impl FromIterator<usize> for BitSet<usize> {
     fn from_iter<U: IntoIterator<Item = usize>>(iter: U) -> Self {
-        let mut s = Self::new();
+        let mut s = Self::new(0);
         for a in iter {
             s.insert(a);
         }

@@ -25,7 +25,7 @@ struct TestPuzzle {
 fn solution_str(puzzle: &Puzzle) -> String {
     String::from_utf8(
         puzzle
-            .0
+            .cells
             .iter()
             .map(|cell| match cell {
                 Cell::Solved(c) => c + b'0',
@@ -44,11 +44,16 @@ fn test_puzzle_with_solution(difficulty: &str) {
 
     let mut solved = 0;
 
-    for test_puzzle in &test_data {
-        let mut puzzle = Puzzle::new_from_string(&test_puzzle.problem);
+    for TestPuzzle { problem, solution } in &test_data {
+        let mut puzzle = Puzzle::new_from_string(&problem);
 
-        if puzzle.solve() && solution_str(&puzzle) == test_puzzle.solution {
-            solved += 1
+        if puzzle.solve() {
+            let sol = solution_str(&puzzle);
+            if &sol == solution {
+                solved += 1
+            } else {
+                panic!("got: {sol}, expected: {solution}")
+            }
         }
     }
 
@@ -114,11 +119,6 @@ fn test_digitset() {
     let other_set = DigitSet::from_iter(vec![1, 2, 3, 4]);
 
     assert_eq!(
-        digit_set.difference(other_set).into_iter().collect_vec(),
-        vec![9]
-    );
-
-    assert_eq!(
         digit_set.union(other_set).into_iter().collect_vec(),
         vec![1, 2, 3, 4, 9]
     );
@@ -128,25 +128,26 @@ fn test_digitset() {
 
 #[test]
 fn test_indexset() {
-    let mut digit_set = IndexSet::new();
+    let mut index_set = IndexSet::new(0);
 
-    digit_set.insert(1);
-    digit_set.insert(3);
-    digit_set.insert(9);
+    index_set.insert(1);
+    index_set.insert(3);
+    index_set.insert(9);
 
-    assert_eq!(digit_set.into_iter().collect_vec(), vec![1, 3, 9]);
+    assert_eq!(index_set.into_iter().collect_vec(), vec![1, 3, 9]);
+
+    index_set.remove(3);
+    assert_eq!(index_set.into_iter().collect_vec(), vec![1, 9]);
 
     let other_set = IndexSet::from_iter(vec![1, 2, 3, 4]);
 
     assert_eq!(
-        digit_set.difference(other_set).into_iter().collect_vec(),
+        index_set.difference(other_set).into_iter().collect_vec(),
         vec![9]
     );
 
     assert_eq!(
-        digit_set.intersection(other_set).into_iter().collect_vec(),
-        vec![1, 3]
+        index_set.intersection(other_set).into_iter().collect_vec(),
+        vec![1]
     );
-
-    assert!(digit_set.contains(1));
 }

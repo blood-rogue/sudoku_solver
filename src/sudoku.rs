@@ -1,5 +1,5 @@
 use crate::bitset::{DigitSet, IndexSet};
-use crate::utils::{box_of, col_of, row_of, BOXES, COLS, FULL_SET, ROWS};
+use crate::utils::{ranges_of, FULL_SET, RANGES, UNSOLVED_CELL};
 
 use crunchy::unroll;
 
@@ -19,102 +19,88 @@ impl Cell {
         matches!(self, Self::Unsolved(_))
     }
 
-    const fn cell_values(self) -> DigitSet {
+    const fn cell_markup(self) -> DigitSet {
         match self {
             Self::Unsolved(set) => set,
             Self::Solved(_) => DigitSet::new(0),
         }
     }
+
+    const fn cell_value(self) -> Digit {
+        match self {
+            Self::Solved(v) => v,
+            Self::Unsolved(_) => 0,
+        }
+    }
 }
 
 #[derive(Clone, Copy)]
-struct PreSet {
-    numbers: DigitSet,
-    cells: IndexSet,
-}
-
-pub struct Puzzle(pub [Cell; 81]);
-
-#[inline]
-fn remove_any(x: &IndexSet, xs: &[IndexSet]) -> Vec<IndexSet> {
-    xs.iter()
-        .filter(|y| y.intersection(*x).len() == 0)
-        .copied()
-        .collect()
+pub struct Puzzle {
+    pub cells: [Cell; 81],
+    pub empty_cells: IndexSet,
 }
 
 impl Puzzle {
     #[allow(clippy::cognitive_complexity)]
-    pub const fn new_from_string(s: &[Digit]) -> Self {
-        let mut puzzle = [Cell::Unsolved(FULL_SET); 81];
+    pub fn new_from_string(s: &[Digit]) -> Self {
+        let mut cells = [UNSOLVED_CELL; 81];
+        let mut empty_cell_set = IndexSet::new(0);
 
         unroll! {
             for i in 0..81 {
-                let ch = s[i] - b'0';
-                if FULL_SET.contains(ch) {
-                    puzzle[i] = Cell::Solved(ch);
+                if FULL_SET.contains(s[i] - b'0') {
+                    cells[i] = Cell::Solved(s[i] - b'0');
+                } else {
+                    empty_cell_set.insert(i);
                 }
             }
         }
 
-        Self(puzzle)
+        Self {
+            cells,
+            empty_cells: empty_cell_set,
+        }
     }
 
     pub fn is_valid(&self) -> bool {
-        [ROWS, COLS, BOXES]
-            .concat()
+        RANGES
             .iter()
             .map(|range| {
-                let mut unique = DigitSet::new(0);
-
                 range
-                    .iter()
-                    .filter_map(|&idx| match self.0[idx] {
-                        Cell::Solved(v) => Some(v),
-                        Cell::Unsolved(_) => None,
-                    })
-                    .all(|value| unique.insert(value))
+                    .difference(self.empty_cells)
+                    .into_iter()
+                    .map(|idx| self.cells[idx].cell_value())
+                    .collect::<DigitSet>()
+                    == FULL_SET
             })
             .all(|v| v)
     }
 
     fn find_empty_cell(&self) -> Option<(Index, DigitSet)> {
-        self.0
-            .iter()
-            .enumerate()
-            .filter_map(|(i, cell)| match cell {
-                Cell::Solved(_) => None,
-                Cell::Unsolved(set) => Some((i, *set)),
-            })
+        self.empty_cells
+            .into_iter()
+            .map(|idx| (idx, self.cells[idx].cell_markup()))
             .min_by(|(_, set1), (_, set2)| set1.len().cmp(&set2.len()))
     }
 
-    fn cross_out(&mut self, indices: Vec<Index>, value: Digit) {
+    fn cross_out(&mut self, indices: IndexSet, value: Digit) {
         for idx in indices {
-            match self.0.get_mut(idx).unwrap() {
-                Cell::Solved(_) => {}
-                Cell::Unsolved(set) => {
-                    set.remove(value);
-                }
+            if let Cell::Unsolved(ref mut set) = self.cells[idx] {
+                set.remove(value);
             }
         }
     }
 
     fn markup(&mut self) {
-        for idx in (0..81).filter(|&idx| self.0[idx].is_empty()).collect_vec() {
-            let peer_markup = [row_of(idx), col_of(idx), box_of(idx)]
-                .concat()
+        for idx in self.empty_cells {
+            let peer_markup = ranges_of(idx)
+                .difference(self.empty_cells)
                 .into_iter()
-                .filter_map(|idx| match self.0[idx] {
-                    Cell::Solved(v) => Some(v),
-                    Cell::Unsolved(_) => None,
-                })
+                .map(|idx| self.cells[idx].cell_value())
                 .collect::<DigitSet>();
 
-            let values = self.0[idx].cell_values().difference(peer_markup);
-
-            if let Cell::Unsolved(markup) = self.0.get_mut(idx).unwrap() {
-                *markup = values;
+            if let Cell::Unsolved(ref mut markup) = self.cells[idx] {
+                markup.difference_mut(peer_markup);
             }
         }
 
@@ -128,17 +114,18 @@ impl Puzzle {
         while cont {
             cont = false;
 
-            for idx in (0..81).filter(|&idx| self.0[idx].is_empty()).collect_vec() {
-                let empty_cell_values = self.0[idx].cell_values();
+            for idx in self.empty_cells {
+                let empty_cell_values = self.cells[idx].cell_markup();
 
                 if empty_cell_values.len() == 1 {
                     let value = empty_cell_values.pop();
-                    self.0[idx] = Cell::Solved(value);
+                    self.cells[idx] = Cell::Solved(value);
+                    self.empty_cells.remove(idx);
 
                     cont = true;
                     modified = true;
 
-                    self.cross_out([row_of(idx), col_of(idx), box_of(idx)].concat(), value);
+                    self.cross_out(ranges_of(idx), value);
                 }
             }
         }
@@ -146,7 +133,7 @@ impl Puzzle {
         modified
     }
 
-    fn find_pre_sets(&mut self, range: &[Index]) -> Vec<PreSet> {
+    fn find_pre_sets(&mut self, range: IndexSet) -> Vec<PreSet> {
         let pre_sets = |n: Index| -> Vec<PreSet> {
             fn go(sets: &[IndexSet], acc: Vec<PreSet>, puzzle: &Puzzle, n: Index) -> Vec<PreSet> {
                 let [x, xs @ ..] = sets else {
@@ -154,7 +141,7 @@ impl Puzzle {
                 };
 
                 let nums = x.into_iter().fold(DigitSet::new(0), |acc, value| {
-                    puzzle.0[value].cell_values().union(acc)
+                    puzzle.cells[value].cell_markup().union(acc)
                 });
 
                 if nums.len() == n {
@@ -171,9 +158,8 @@ impl Puzzle {
             }
 
             let combinations = range
-                .iter()
-                .filter(|&&idx| self.0[idx].is_empty())
-                .copied()
+                .into_iter()
+                .filter(|&idx| self.cells[idx].is_empty())
                 .combinations(n)
                 .map(IndexSet::from_iter)
                 .collect_vec();
@@ -185,13 +171,11 @@ impl Puzzle {
     }
 
     fn apply_presets(&mut self) {
-        for indices in [ROWS, COLS, BOXES].concat() {
-            for ps in self.find_pre_sets(&indices) {
-                let indices = IndexSet::from_iter(indices);
-
+        for indices in RANGES {
+            for ps in self.find_pre_sets(indices) {
                 for cell_idx in indices.difference(ps.cells) {
-                    if let Some(Cell::Unsolved(set)) = self.0.get_mut(cell_idx) {
-                        *set = set.difference(ps.numbers);
+                    if let Cell::Unsolved(ref mut set) = self.cells[cell_idx] {
+                        set.difference_mut(ps.numbers);
                     }
                 }
             }
@@ -213,15 +197,17 @@ impl Puzzle {
         self.simplify();
 
         if let Some((idx, cell_markup)) = self.find_empty_cell() {
+            self.empty_cells.remove(idx);
             for possibility in cell_markup {
-                self.0[idx] = Cell::Solved(possibility);
-                let prev_cells = self.0;
+                self.cells[idx] = Cell::Solved(possibility);
+
+                let prev_state = *self;
 
                 if self.solve() {
                     return true;
                 }
 
-                self.0 = prev_cells;
+                *self = prev_state;
             }
 
             false
@@ -229,4 +215,18 @@ impl Puzzle {
             true
         }
     }
+}
+
+#[derive(Clone, Copy)]
+struct PreSet {
+    numbers: DigitSet,
+    cells: IndexSet,
+}
+
+#[inline]
+fn remove_any(x: &IndexSet, xs: &[IndexSet]) -> Vec<IndexSet> {
+    xs.iter()
+        .filter(|y| y.intersection(*x).len() == 0)
+        .copied()
+        .collect()
 }
