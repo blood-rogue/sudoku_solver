@@ -23,21 +23,17 @@ struct TestPuzzle {
 }
 
 fn solution_str(puzzle: &Puzzle) -> String {
-    let mut cells = vec![0; 81];
-
-    for ((row, col), cell) in puzzle
-        .0
-        .iter()
-        .enumerate()
-        .map(|(i, t)| ((i / 9, i % 9), t.clone()))
-    {
-        cells[row * 9 + col] = match cell {
-            Cell::Solved(c) => c + b'0',
-            Cell::Unsolved(_) => b'_',
-        }
-    }
-
-    String::from_utf8(cells).unwrap()
+    String::from_utf8(
+        puzzle
+            .0
+            .iter()
+            .map(|cell| match cell {
+                Cell::Solved(c) => c + b'0',
+                Cell::Unsolved(_) => b'.',
+            })
+            .collect_vec(),
+    )
+    .unwrap()
 }
 
 fn test_puzzle_with_solution(difficulty: &str) {
@@ -92,8 +88,18 @@ fn test_combined() {
 }
 
 #[test]
+fn test_17_clue() {
+    for line in std::fs::read_to_string("test/puzzles-17.txt")
+        .unwrap()
+        .lines()
+    {
+        Puzzle::new_from_string(line.as_bytes()).solve();
+    }
+}
+
+#[test]
 fn test_digitset() {
-    let mut digit_set = DigitSet::new();
+    let mut digit_set = DigitSet::new(0);
 
     digit_set.insert(1);
     digit_set.insert(3);

@@ -1,87 +1,12 @@
-use std::fmt::Display;
+use crate::bitset::{DigitSet, IndexSet};
+use crate::utils::{box_of, col_of, row_of, BOXES, COLS, FULL_SET, ROWS};
+
+use crunchy::unroll;
 
 use itertools::Itertools;
 
-use crate::bitset::{DigitSet, IndexSet};
-
 pub type Index = usize;
 pub type Digit = u8;
-
-pub const ROWS: [[Index; 9]; 9] = [
-    [0, 1, 2, 3, 4, 5, 6, 7, 8],
-    [9, 10, 11, 12, 13, 14, 15, 16, 17],
-    [18, 19, 20, 21, 22, 23, 24, 25, 26],
-    [27, 28, 29, 30, 31, 32, 33, 34, 35],
-    [36, 37, 38, 39, 40, 41, 42, 43, 44],
-    [45, 46, 47, 48, 49, 50, 51, 52, 53],
-    [54, 55, 56, 57, 58, 59, 60, 61, 62],
-    [63, 64, 65, 66, 67, 68, 69, 70, 71],
-    [72, 73, 74, 75, 76, 77, 78, 79, 80],
-];
-
-pub const COLS: [[Index; 9]; 9] = [
-    [0, 9, 18, 27, 36, 45, 54, 63, 72],
-    [1, 10, 19, 28, 37, 46, 55, 64, 73],
-    [2, 11, 20, 29, 38, 47, 56, 65, 74],
-    [3, 12, 21, 30, 39, 48, 57, 66, 75],
-    [4, 13, 22, 31, 40, 49, 58, 67, 76],
-    [5, 14, 23, 32, 41, 50, 59, 68, 77],
-    [6, 15, 24, 33, 42, 51, 60, 69, 78],
-    [7, 16, 25, 34, 43, 52, 61, 70, 79],
-    [8, 17, 26, 35, 44, 53, 62, 71, 80],
-];
-
-pub const BOXES: [[Index; 9]; 9] = [
-    [0, 1, 2, 9, 10, 11, 18, 19, 20],
-    [3, 4, 5, 12, 13, 14, 21, 22, 23],
-    [6, 7, 8, 15, 16, 17, 24, 25, 26],
-    [27, 28, 29, 36, 37, 38, 45, 46, 47],
-    [30, 31, 32, 39, 40, 41, 48, 49, 50],
-    [33, 34, 35, 42, 43, 44, 51, 52, 53],
-    [54, 55, 56, 63, 64, 65, 72, 73, 74],
-    [57, 58, 59, 66, 67, 68, 75, 76, 77],
-    [60, 61, 62, 69, 70, 71, 78, 79, 80],
-];
-
-const BOX_MAPPING: [Index; 81] = [
-    0, 0, 0, 1, 1, 1, 2, 2, 2, 0, 0, 0, 1, 1, 1, 2, 2, 2, 0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4,
-    4, 5, 5, 5, 3, 3, 3, 4, 4, 4, 5, 5, 5, 3, 3, 3, 4, 4, 4, 5, 5, 5, 6, 6, 6, 7, 7, 7, 8, 8, 8, 6,
-    6, 6, 7, 7, 7, 8, 8, 8, 6, 6, 6, 7, 7, 7, 8, 8, 8,
-];
-
-#[inline]
-pub const fn row_of(idx: Index) -> [Index; 9] {
-    ROWS[idx / 9]
-}
-
-#[inline]
-pub const fn col_of(idx: Index) -> [Index; 9] {
-    COLS[idx % 9]
-}
-
-#[inline]
-pub const fn box_of(idx: Index) -> [Index; 9] {
-    BOXES[BOX_MAPPING[idx]]
-}
-
-const FULL_SET: DigitSet = DigitSet::new_with(0b0000_0011_1111_1110);
-
-const HORZ_BAR: &str = "─";
-const VERT_BAR: &str = "│";
-
-const TOP_L_CORNER: &str = "╭";
-const BOT_L_CORNER: &str = "╰";
-
-const TOP_R_CORNER: &str = "╮";
-const BOT_R_CORNER: &str = "╯";
-
-const VERT_L_JOINT: &str = "├";
-const VERT_R_JOINT: &str = "┤";
-
-const HORZ_T_JOINT: &str = "┬";
-const HORZ_B_JOINT: &str = "┴";
-
-const INTERSECTION: &str = "┼";
 
 #[derive(Clone, Copy)]
 pub enum Cell {
@@ -97,7 +22,7 @@ impl Cell {
     const fn cell_values(self) -> DigitSet {
         match self {
             Self::Unsolved(set) => set,
-            Self::Solved(_) => DigitSet::new(),
+            Self::Solved(_) => DigitSet::new(0),
         }
     }
 }
@@ -108,7 +33,7 @@ struct PreSet {
     cells: IndexSet,
 }
 
-pub struct Puzzle(pub Vec<Cell>);
+pub struct Puzzle(pub [Cell; 81]);
 
 #[inline]
 fn remove_any(x: &IndexSet, xs: &[IndexSet]) -> Vec<IndexSet> {
@@ -119,21 +44,20 @@ fn remove_any(x: &IndexSet, xs: &[IndexSet]) -> Vec<IndexSet> {
 }
 
 impl Puzzle {
-    pub fn new_from_string(s: &[Digit]) -> Self {
-        let s = Self(
-            s.iter()
-                .map(|ch| {
-                    let ch = *ch - b'0';
-                    if FULL_SET.contains(ch) {
-                        Cell::Solved(ch)
-                    } else {
-                        Cell::Unsolved(FULL_SET)
-                    }
-                })
-                .collect(),
-        );
+    #[allow(clippy::cognitive_complexity)]
+    pub const fn new_from_string(s: &[Digit]) -> Self {
+        let mut puzzle = [Cell::Unsolved(FULL_SET); 81];
 
-        s
+        unroll! {
+            for i in 0..81 {
+                let ch = s[i] - b'0';
+                if FULL_SET.contains(ch) {
+                    puzzle[i] = Cell::Solved(ch);
+                }
+            }
+        }
+
+        Self(puzzle)
     }
 
     pub fn is_valid(&self) -> bool {
@@ -141,7 +65,7 @@ impl Puzzle {
             .concat()
             .iter()
             .map(|range| {
-                let mut unique = DigitSet::new();
+                let mut unique = DigitSet::new(0);
 
                 range
                     .iter()
@@ -229,7 +153,7 @@ impl Puzzle {
                     return acc;
                 };
 
-                let nums = x.into_iter().fold(DigitSet::new(), |acc, value| {
+                let nums = x.into_iter().fold(DigitSet::new(0), |acc, value| {
                     puzzle.0[value].cell_values().union(acc)
                 });
 
@@ -291,7 +215,7 @@ impl Puzzle {
         if let Some((idx, cell_markup)) = self.find_empty_cell() {
             for possibility in cell_markup {
                 self.0[idx] = Cell::Solved(possibility);
-                let prev_cells = self.0.clone();
+                let prev_cells = self.0;
 
                 if self.solve() {
                     return true;
@@ -304,53 +228,5 @@ impl Puzzle {
         } else {
             true
         }
-    }
-}
-
-impl Display for Puzzle {
-    fn fmt(&self, buf: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(buf, "{TOP_L_CORNER}")?;
-        for _ in 0..8 {
-            write!(buf, "{}{HORZ_T_JOINT}", HORZ_BAR.repeat(3))?;
-        }
-
-        writeln!(buf, "{}{TOP_R_CORNER}", HORZ_BAR.repeat(3))?;
-
-        let mut puzzle = [[0; 9]; 9];
-
-        for (i, cell) in self.0.iter().enumerate() {
-            puzzle[i / 9][i % 9] = match cell {
-                Cell::Solved(v) => *v,
-                Cell::Unsolved(_) => b' ',
-            };
-        }
-
-        for (i, row) in puzzle.iter().enumerate() {
-            write!(buf, "{VERT_BAR}")?;
-            for data in row {
-                write!(buf, " {data} {VERT_BAR}")?;
-            }
-            writeln!(buf)?;
-            if i != 8 {
-                write!(buf, "{VERT_L_JOINT}")?;
-                let row_len = row.len();
-                for (j, _) in row.iter().enumerate() {
-                    write!(buf, "{}", HORZ_BAR.repeat(3))?;
-                    if j != row_len - 1 {
-                        write!(buf, "{INTERSECTION}")?;
-                    }
-                }
-                writeln!(buf, "{VERT_R_JOINT}")?;
-            }
-        }
-
-        write!(buf, "{BOT_L_CORNER}")?;
-        for _ in 0..8 {
-            write!(buf, "{}{HORZ_B_JOINT}", HORZ_BAR.repeat(3))?;
-        }
-
-        writeln!(buf, "{}{BOT_R_CORNER}", HORZ_BAR.repeat(3))?;
-
-        Ok(())
     }
 }

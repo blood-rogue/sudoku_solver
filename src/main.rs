@@ -1,5 +1,6 @@
 mod bitset;
 mod sudoku;
+mod utils;
 
 #[cfg(test)]
 mod tests;

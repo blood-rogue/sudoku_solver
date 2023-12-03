@@ -22,9 +22,9 @@ cargo r -r
 
 Then provide the entire board as one line.
 
-*Note: I used `_` in the example for blanks but you can use any character other than `1` to `9` for blank spaces*
+*Note: I used `.` in the example for blanks but you can use any character other than `1` to `9` for blank spaces*
 
-![Usage Example](image.png)
+![Example](image.png)
 
 ## Testing
 It is tested on 5 levels with 100 challenges each
@@ -49,7 +49,6 @@ You can find the test puzzles in the `test/puzzles` directory.
 
 ## Inspirations
 
-- [`Daniel Opdahl's python implementation`](https://github.com/dopdahl16/Crooks-Sudoku)
 - [`Damien Zhang's blog`](http://damienzhang.com/sudoku/)
 
 *Note: The link to Damien's blog seems to be broken. [web archive](https://web.archive.org/web/20210510205105/http://damienzhang.com/sudoku/)*

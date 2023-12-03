@@ -1,15 +1,13 @@
 use std::usize;
 
-use num_traits::PrimInt;
-
 #[derive(Clone, Copy)]
 pub struct BitSet<T: SetElement>(pub T::Storage);
 
 pub type DigitSet = BitSet<u8>;
 pub type IndexSet = BitSet<usize>;
 
-pub trait SetElement: PrimInt {
-    type Storage: PrimInt;
+pub trait SetElement {
+    type Storage;
 }
 
 pub struct BitSetIter<T: SetElement>(T::Storage);
@@ -19,11 +17,7 @@ impl SetElement for u8 {
 }
 
 impl BitSet<u8> {
-    pub const fn new() -> Self {
-        Self(0)
-    }
-
-    pub const fn new_with(value: u16) -> Self {
+    pub const fn new(value: u16) -> Self {
         Self(value)
     }
 
@@ -75,7 +69,7 @@ where
 
 impl FromIterator<u8> for BitSet<u8> {
     fn from_iter<U: IntoIterator<Item = u8>>(iter: U) -> Self {
-        let mut s = Self::new();
+        let mut s = Self::new(0);
         for a in iter {
             s.insert(a);
         }
