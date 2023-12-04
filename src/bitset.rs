@@ -1,5 +1,3 @@
-use std::usize;
-
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct BitSet<T: SetElement>(pub T::Storage);
 
@@ -29,12 +27,8 @@ impl BitSet<u8> {
         self.0.count_ones() as usize
     }
 
-    pub fn remove(&mut self, value: u8) {
-        self.0 &= !(1 << value);
-    }
-
-    pub fn pop(self) -> u8 {
-        self.into_iter().rightmost_one_pos()
+    pub const fn pop(self) -> u8 {
+        self.0.trailing_zeros() as u8
     }
 
     pub fn difference_mut(&mut self, other: Self) {
@@ -171,6 +165,14 @@ impl BitSet<usize> {
 
     pub fn remove(&mut self, value: usize) {
         self.0 &= !(1 << value);
+    }
+
+    pub const fn len(self) -> usize {
+        self.0.count_ones() as usize
+    }
+
+    pub const fn union(self, other: Self) -> Self {
+        Self(self.0 | other.0)
     }
 }
 

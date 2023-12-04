@@ -1,9 +1,7 @@
 use crate::bitset::{DigitSet, IndexSet};
+use crate::combination::Combinations;
+use crate::unroll;
 use crate::utils::{ranges_of, FULL_SET, RANGES, UNSOLVED_CELL};
-
-use crunchy::unroll;
-
-use itertools::Itertools;
 
 pub type Index = usize;
 pub type Digit = u8;
@@ -43,11 +41,11 @@ impl Puzzle {
         let mut empty_cells = IndexSet::new(0);
 
         unroll! {
-            for i in 0..81 {
-                if FULL_SET >> (s[i] - b'0') & 1 == 1 {
-                    cells[i] = Cell::Solved(s[i] - b'0');
+            for I in 0..81 {
+                if FULL_SET >> (s[I] - b'0') & 1 == 1 {
+                    cells[I] = Cell::Solved(s[I] - b'0');
                 } else {
-                    empty_cells.insert(i);
+                    empty_cells.insert(I);
                 }
             }
         }
@@ -80,7 +78,7 @@ impl Puzzle {
     fn cross_out(&mut self, indices: IndexSet, value: Digit) {
         for idx in indices {
             if let Cell::Unsolved(ref mut set) = self.cells[idx] {
-                set.remove(value);
+                set.0 &= !(1 << value);
             }
         }
     }
@@ -98,10 +96,10 @@ impl Puzzle {
             }
         }
 
-        self.fill_forced_cells();
+        self.fill_singles();
     }
 
-    fn fill_forced_cells(&mut self) -> bool {
+    fn fill_singles(&mut self) -> bool {
         let mut cont = true;
         let mut modified = false;
 
@@ -127,14 +125,14 @@ impl Puzzle {
         modified
     }
 
-    fn find_pre_sets(&mut self, range: IndexSet) -> Vec<PreSet> {
-        let pre_sets = |n: Index| -> Vec<PreSet> {
+    fn find_pre_sets(&mut self, range: IndexSet) -> Vec<LockedSet> {
+        let pre_sets = |n: Index| -> Vec<LockedSet> {
             fn go(
                 sets: &[IndexSet],
-                mut acc: Vec<PreSet>,
+                mut acc: Vec<LockedSet>,
                 puzzle: &Puzzle,
                 n: Index,
-            ) -> Vec<PreSet> {
+            ) -> Vec<LockedSet> {
                 let [x, xs @ ..] = sets else {
                     return acc;
                 };
@@ -144,7 +142,7 @@ impl Puzzle {
                 });
 
                 if nums.len() == n {
-                    acc.push(PreSet {
+                    acc.push(LockedSet {
                         numbers: nums,
                         cells: *x,
                     });
@@ -155,20 +153,17 @@ impl Puzzle {
                 }
             }
 
-            let combinations = range
-                .intersection(self.empty_cells)
-                .into_iter()
-                .combinations(n)
-                .map(IndexSet::from_iter)
-                .collect_vec();
+            let combinations =
+                Combinations::new(range.intersection(self.empty_cells).into_iter(), n)
+                    .collect::<Vec<_>>();
 
             go(&combinations, Vec::new(), self, n)
         };
 
-        [pre_sets(2), pre_sets(3), pre_sets(4)].concat()
+        [pre_sets(2), pre_sets(3)].concat()
     }
 
-    fn apply_presets(&mut self) {
+    fn apply_locked_sets(&mut self) {
         for indices in RANGES {
             for ps in self.find_pre_sets(indices) {
                 for cell_idx in indices.difference(ps.cells) {
@@ -182,22 +177,22 @@ impl Puzzle {
 
     fn simplify(&mut self) {
         let mut modified_previous = true;
+        self.generate_markup();
 
         while modified_previous {
-            self.generate_markup();
-            self.apply_presets();
+            self.apply_locked_sets();
 
-            modified_previous = self.fill_forced_cells();
+            modified_previous = self.fill_singles();
         }
     }
 
     pub fn solve(&mut self) -> bool {
         self.simplify();
 
-        if let Some((idx, cell_markup)) = self.find_empty_cell() {
+        if let Some((idx, possibilities)) = self.find_empty_cell() {
             self.empty_cells.remove(idx);
 
-            for possibility in cell_markup {
+            for possibility in possibilities {
                 self.cells[idx] = Cell::Solved(possibility);
                 let prev_state = *self;
 
@@ -216,7 +211,7 @@ impl Puzzle {
 }
 
 #[derive(Clone, Copy)]
-struct PreSet {
+struct LockedSet {
     numbers: DigitSet,
     cells: IndexSet,
 }

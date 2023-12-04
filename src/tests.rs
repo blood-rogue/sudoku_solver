@@ -1,9 +1,9 @@
-use itertools::Itertools;
 use pretty_assertions::assert_eq;
 use serde::{Deserialize, Deserializer};
 
 use crate::{
     bitset::{DigitSet, IndexSet},
+    combination::index,
     sudoku::{Cell, Digit},
     Puzzle,
 };
@@ -31,7 +31,7 @@ fn solution_str(puzzle: &Puzzle) -> String {
                 Cell::Solved(c) => c + b'0',
                 Cell::Unsolved(_) => b'.',
             })
-            .collect_vec(),
+            .collect::<Vec<_>>(),
     )
     .unwrap()
 }
@@ -103,17 +103,13 @@ fn test_17_clue() {
 
 #[test]
 fn test_digitset() {
-    let mut digit_set = DigitSet::new(0b0000_0010_0000_1010);
-    assert_eq!(digit_set.into_iter().collect_vec(), vec![1, 3, 9]);
-
-    digit_set.remove(3);
-
-    assert_eq!(digit_set.into_iter().collect_vec(), vec![1, 9]);
+    let digit_set = DigitSet::new(0b0000_0010_0000_1010);
+    assert_eq!(digit_set.into_iter().collect::<Vec<_>>(), vec![1, 3, 9]);
 
     let other_set = DigitSet::from_iter(vec![1, 2, 3, 4]);
 
     assert_eq!(
-        digit_set.union(other_set).into_iter().collect_vec(),
+        digit_set.union(other_set).into_iter().collect::<Vec<_>>(),
         vec![1, 2, 3, 4, 9]
     );
 }
@@ -126,20 +122,41 @@ fn test_indexset() {
     index_set.insert(3);
     index_set.insert(9);
 
-    assert_eq!(index_set.into_iter().collect_vec(), vec![1, 3, 9]);
+    assert_eq!(index_set.into_iter().collect::<Vec<_>>(), vec![1, 3, 9]);
 
     index_set.remove(3);
-    assert_eq!(index_set.into_iter().collect_vec(), vec![1, 9]);
+    assert_eq!(index_set.into_iter().collect::<Vec<_>>(), vec![1, 9]);
 
     let other_set = IndexSet::from_iter(vec![1, 2, 3, 4]);
 
     assert_eq!(
-        index_set.difference(other_set).into_iter().collect_vec(),
+        index_set
+            .difference(other_set)
+            .into_iter()
+            .collect::<Vec<_>>(),
         vec![9]
     );
 
     assert_eq!(
-        index_set.intersection(other_set).into_iter().collect_vec(),
+        index_set
+            .intersection(other_set)
+            .into_iter()
+            .collect::<Vec<_>>(),
         vec![1]
     );
+}
+
+#[test]
+fn test_pdep() {
+    let mut index_set = IndexSet::new(0);
+
+    index_set.insert(1);
+    index_set.insert(3);
+    index_set.insert(9);
+    index_set.insert(80);
+
+    assert_eq!(index(index_set.0, 0), 1);
+    assert_eq!(index(index_set.0, 1), 3);
+    assert_eq!(index(index_set.0, 2), 9);
+    assert_eq!(index(index_set.0, 3), 80);
 }

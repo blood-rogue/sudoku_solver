@@ -1,6 +1,8 @@
 mod bench;
 mod bitset;
+mod combination;
 mod sudoku;
+mod unroll;
 mod utils;
 
 #[cfg(test)]
@@ -13,7 +15,7 @@ fn main() {
     if Some("bench") == std::env::args().nth(1).as_deref() {
         bench::puzzle();
     } else {
-        let mut inp = String::new();
+        let mut inp = String::with_capacity(85);
         std::io::stdin().lock().read_line(&mut inp).unwrap();
 
         let mut puzzle = Puzzle::new_from_string(inp.trim().as_bytes());
