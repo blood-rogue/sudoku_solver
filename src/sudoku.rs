@@ -1,6 +1,5 @@
 use crate::bitset::{DigitSet, IndexSet};
 use crate::combination::Combinations;
-use crate::unroll;
 use crate::utils::{ranges_of, FULL_SET, RANGES, UNSOLVED_CELL};
 
 pub type Index = usize;
@@ -35,37 +34,20 @@ pub struct Puzzle {
 }
 
 impl Puzzle {
-    #[allow(clippy::cognitive_complexity)]
     pub fn new_from_string(s: &[Digit]) -> Self {
         let mut cells = [UNSOLVED_CELL; 81];
         let mut empty_cells = IndexSet::new(0);
 
-        unroll! {
-            for I in 0..81 {
-                if FULL_SET >> (s[I] - b'0') & 1 == 1 {
-                    cells[I] = Cell::Solved(s[I] - b'0');
-                } else {
-                    empty_cells.insert(I);
-                }
+        for i in 0..81 {
+            let ch = s[i] - b'0';
+            if FULL_SET >> ch & 1 == 1 {
+                cells[i] = Cell::Solved(ch);
+            } else {
+                empty_cells.insert(i);
             }
         }
 
         Self { cells, empty_cells }
-    }
-
-    pub fn is_valid(&self) -> bool {
-        RANGES
-            .iter()
-            .map(|range| {
-                range
-                    .difference(self.empty_cells)
-                    .into_iter()
-                    .map(|idx| self.cells[idx].value())
-                    .collect::<DigitSet>()
-                    .0
-                    == FULL_SET
-            })
-            .all(|v| v)
     }
 
     fn find_empty_cell(&self) -> Option<(Index, DigitSet)> {

@@ -2,7 +2,6 @@ mod bench;
 mod bitset;
 mod combination;
 mod sudoku;
-mod unroll;
 mod utils;
 
 #[cfg(test)]
@@ -18,16 +17,17 @@ fn main() {
         let mut inp = String::with_capacity(85);
         std::io::stdin().lock().read_line(&mut inp).unwrap();
 
+        if inp.trim().len() != 81 {
+            println!("Invalid input");
+            return;
+        }
+
         let mut puzzle = Puzzle::new_from_string(inp.trim().as_bytes());
 
-        if puzzle.is_valid() {
-            if puzzle.solve() {
-                println!("{puzzle}");
-            } else {
-                println!("Couldn't solve puzzle");
-            }
+        if puzzle.solve() {
+            println!("{puzzle}");
         } else {
-            println!("Invalid puzzle");
+            println!("Couldn't solve puzzle");
         }
     }
 }

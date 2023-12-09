@@ -63,13 +63,13 @@ impl Iterator for Combinations {
         Some(
             self.indices
                 .iter()
-                .map(|i| index(self.buffer.0, *i))
+                .map(|i| index(self.buffer.0, *i).unwrap())
                 .collect(),
         )
     }
 }
 
-pub fn index(num: u128, n: usize) -> usize {
+pub fn index(num: u128, n: usize) -> Option<usize> {
     let [high, low] = [(num >> 64) as u64, num as u64];
     let set_in_low = low.count_ones() as usize;
 
@@ -79,5 +79,5 @@ pub fn index(num: u128, n: usize) -> usize {
         unsafe { _pdep_u64(1 << (n - set_in_low), high) }.trailing_zeros() + 64
     };
 
-    pos as usize
+    (pos < 128).then_some(pos as usize)
 }

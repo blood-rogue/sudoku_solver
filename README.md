@@ -50,7 +50,6 @@ You can find the test puzzles in the `test/puzzles` directory.
 ## Inspirations
 
 - [Damien Zhang's blog](http://damienzhang.com/sudoku/)
-- `unroll!` macro from [`crunchy`](https://crates.io/crates/crunchy) crate
 - `Combination` from [`itertools`](https://crates.io/crates/itertools) crate modified to use `IndexSet` as buffer
 
 *Note: The link to Damien's blog seems to be broken. [web archive](https://web.archive.org/web/20210510205105/http://damienzhang.com/sudoku/)*

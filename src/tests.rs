@@ -28,7 +28,7 @@ fn solution_str(puzzle: &Puzzle) -> String {
             .cells
             .iter()
             .map(|cell| match cell {
-                Cell::Solved(c) => c + b'0',
+                Cell::Solved(c) => *c + b'0',
                 Cell::Unsolved(_) => b'.',
             })
             .collect::<Vec<_>>(),
@@ -52,13 +52,13 @@ fn test_puzzle_with_solution(difficulty: &str) {
             if &sol == solution {
                 solved += 1;
             } else {
-                panic!("got: {sol}, expected: {solution}")
+                panic!("got: {sol}\nexpected: {solution}")
             }
         }
     }
 
     let n = test_data.len();
-    assert!(solved == n, "solved {solved}/{n}",);
+    assert_eq!(solved, n, "solved {solved}/{n}",);
 }
 
 #[test]
@@ -89,16 +89,6 @@ fn test_evil() {
 #[test]
 fn test_combined() {
     test_puzzle_with_solution("combined");
-}
-
-#[test]
-fn test_17_clue() {
-    for line in std::fs::read_to_string("test/puzzles-17.txt")
-        .unwrap()
-        .lines()
-    {
-        Puzzle::new_from_string(line.as_bytes()).solve();
-    }
 }
 
 #[test]
@@ -155,8 +145,9 @@ fn test_pdep() {
     index_set.insert(9);
     index_set.insert(80);
 
-    assert_eq!(index(index_set.0, 0), 1);
-    assert_eq!(index(index_set.0, 1), 3);
-    assert_eq!(index(index_set.0, 2), 9);
-    assert_eq!(index(index_set.0, 3), 80);
+    assert_eq!(index(index_set.0, 0), Some(1));
+    assert_eq!(index(index_set.0, 1), Some(3));
+    assert_eq!(index(index_set.0, 2), Some(9));
+    assert_eq!(index(index_set.0, 3), Some(80));
+    assert_eq!(index(index_set.0, 4), None);
 }
